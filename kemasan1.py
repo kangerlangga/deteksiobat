@@ -5,7 +5,7 @@ from playsound import playsound
 import os
 
 # Path ke gambar sampel
-sample_image_path = 'b2.jpg'  # Ganti dengan path ke gambar sampel Anda
+sample_image_path = 'test.jpg'  # Ganti dengan path ke gambar sampel Anda
 
 # Membaca gambar sampel
 sample_image = cv2.imread(sample_image_path)

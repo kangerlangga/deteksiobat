@@ -4,16 +4,14 @@ from gtts import gTTS
 from playsound import playsound
 import os
 
-# Path ke gambar dataset dan gambar sampel
-dataset_image_path = 'test.jpg'      # Ganti dengan path ke gambar dataset Anda
-sample_image_path = 'test3.jpeg'      # Ganti dengan path ke gambar sampel Anda
+# Path ke gambar sampel
+sample_image_path = 'test3.jpeg'  # Ganti dengan path ke gambar sampel Anda
 
-# Membaca gambar dataset dan gambar sampel
-dataset_image = cv2.imread(dataset_image_path)
+# Membaca gambar sampel
 sample_image = cv2.imread(sample_image_path)
 
 # Pastikan gambar berhasil dibaca
-if dataset_image is None or sample_image is None:
+if sample_image is None:
     print("Gagal membaca gambar. Periksa path file.")
 else:
     # Lakukan pemrosesan citra, misalnya deteksi warna kapsul
@@ -47,7 +45,7 @@ else:
         # Menggambar kotak di sekeliling kapsul yang terdeteksi
         x, y, w, h = cv2.boundingRect(contour)
         cv2.rectangle(result, (x, y), (x + w, y + h), (0, 255, 0), 2)
-        capsule_count += 1  # Increment count for each valid capsule
+        capsule_count += 1  # Tambah jumlah kapsul
 
     # Menampilkan gambar hasil deteksi
     cv2.imshow('Hasil Deteksi Kapsul', result)
