@@ -1,7 +1,8 @@
-DATABASE_CONFIG = {
-    'host': 'localhost',
-    'user': 'root',
-    'password': '',
-    'database': 'kapsidacount',
-    'port': 3306
-}
+# DATABASE_CONFIG = {
+#     'host': 'localhost',
+#     'user': 'root',
+#     'password': '',
+#     'database': 'kapsidacount',
+#     'port': 3306
+# }
+
