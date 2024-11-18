@@ -123,3 +123,12 @@ while True:
 
 cap.release()
 cv2.destroyAllWindows()
+
+# db_config
+# DATABASE_CONFIG = {
+#     'host': 'localhost',
+#     'user': 'root',
+#     'password': '',
+#     'database': 'kapsidacount',
+#     'port': 3306
+# }
