@@ -7,7 +7,7 @@ import threading
 import mysql.connector
 from datetime import datetime
 import random
-from db_config import DATABASE_CONFIG  # Import konfigurasi database
+from db_config import DATABASE_CONFIG
 
 # Fungsi untuk mendeteksi kapsul pada gambar
 def detect_capsules(image):
@@ -140,13 +140,11 @@ while True:
         cv2.imshow('Hasil Deteksi (Capture)', captured_frame)
 
         # Putar suara hasil deteksi
-        # Putar suara hasil deteksi
         if deficiency > 0:
             text_to_speak = f'Kurang {deficiency}'
         else:
             text_to_speak = 'Sempurna'
         threading.Thread(target=play_sound, args=(text_to_speak,)).start()
-
 
     elif key == ord('q'):
         print("Keluar.")
