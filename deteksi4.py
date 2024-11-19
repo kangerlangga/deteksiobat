@@ -103,18 +103,29 @@ while True:
     if not ret:
         print("Gagal membuka kamera.")
         break
-    cv2.imshow('Webcam', frame)
+
+    # Deteksi kapsul dan blitzer secara real-time
+    frame_with_detections = frame.copy()
+    capsule_count, frame_with_detections = detect_capsules(frame_with_detections)
+    blitzer_count, frame_with_detections = detect_blitzers(frame_with_detections)
+
+    # Tampilkan informasi jumlah kapsul dan kemasan di frame
+    cv2.putText(frame_with_detections, f'Kapsul: {capsule_count}', (10, 30),
+                cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 255, 0), 2)
+    cv2.putText(frame_with_detections, f'Kemasan: {blitzer_count}', (10, 70),
+                cv2.FONT_HERSHEY_SIMPLEX, 1, (255, 0, 0), 2)
+
+    # Tampilkan frame dengan bounding box
+    cv2.imshow('Deteksi Real-Time Kapsul dan Blitzer', frame_with_detections)
+
     key = cv2.waitKey(1) & 0xFF
     if key == ord('c'):
         print("Gambar diambil.")
-        capsule_count, annotated_image = detect_capsules(frame.copy())
-        print(f'Jumlah kapsul terdeteksi: {capsule_count}')
-        blitzer_count, annotated_image = detect_blitzers(annotated_image)
-        print(f'Jumlah kemasan terdeteksi: {blitzer_count}')
         deficiency, status = calculate_deficiency_and_status(capsule_count, blitzer_count)
+        print(f'Jumlah kapsul terdeteksi: {capsule_count}')
+        print(f'Jumlah kemasan terdeteksi: {blitzer_count}')
         print(f'Kekurangan: {deficiency}, Status: {status}')
         save_to_database(blitzer_count, capsule_count, deficiency, status, "Sistem Deteksi Obat", "Sistem Deteksi Obat")
-        cv2.imshow('Hasil Deteksi Kapsul dan Blitzer', annotated_image)
         text_to_speak = f'Terdeteksi {capsule_count} kapsul, {blitzer_count} kemasan. Kekurangan {deficiency} kapsul. Status {status}.'
         threading.Thread(target=play_sound, args=(text_to_speak,)).start()
     elif key == ord('q'):

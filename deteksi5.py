@@ -9,7 +9,7 @@ from datetime import datetime
 import random
 from db_config import DATABASE_CONFIG  # Import konfigurasi database
 
-# Fungsi untuk mendeteksi kapsul pada gambar yang diambil
+# Fungsi untuk mendeteksi kapsul pada gambar
 def detect_capsules(image):
     sample_hsv = cv2.cvtColor(image, cv2.COLOR_BGR2HSV)
     lower_red = np.array([0, 70, 50])
@@ -28,7 +28,7 @@ def detect_capsules(image):
         capsule_count += 1
     return capsule_count, image
 
-# Fungsi untuk mendeteksi blitzer pada gambar yang diambil
+# Fungsi untuk mendeteksi blitzer pada gambar
 def detect_blitzers(image):
     sample_hsv = cv2.cvtColor(image, cv2.COLOR_BGR2HSV)
     lower_gray = np.array([0, 0, 180])
@@ -54,7 +54,7 @@ def calculate_deficiency_and_status(capsule_count, blitzer_count):
     status = "Sempurna" if deficiency == 0 else "Cacat"
     return deficiency, status
 
-# Fungsi untuk menyimpan data deteksi ke database
+# Fungsi untuk menyimpan data ke database
 def save_to_database(blitzer, capsules, deficiency, status, created_by, modified_by):
     print("Memulai penyimpanan data ke database...")
     connection = None
@@ -63,10 +63,9 @@ def save_to_database(blitzer, capsules, deficiency, status, created_by, modified
         print("Koneksi ke database berhasil.")
         cursor = connection.cursor()
 
-        # Generate id_detections dengan format DeteksiYYYYMMDDHHMMSSXXX
         now = datetime.now()
-        timestamp = now.strftime('%Y%m%d%H%M%S')  # Format tanggal dan waktu
-        random_suffix = str(random.randint(100, 999))  # Tiga digit angka acak
+        timestamp = now.strftime('%Y%m%d%H%M%S')  # Format waktu
+        random_suffix = str(random.randint(100, 999))
         id_detections = f"Deteksi{timestamp}{random_suffix}"
 
         query = """
@@ -103,20 +102,52 @@ while True:
     if not ret:
         print("Gagal membuka kamera.")
         break
-    cv2.imshow('Webcam', frame)
+
+    # Salin frame untuk deteksi realtime
+    realtime_frame = frame.copy()
+
+    # Deteksi kapsul dan blitzer pada frame realtime
+    capsule_count, realtime_frame = detect_capsules(realtime_frame)
+    blitzer_count, realtime_frame = detect_blitzers(realtime_frame)
+
+    # Hitung kekurangan dan status
+    deficiency, status = calculate_deficiency_and_status(capsule_count, blitzer_count)
+
+    # Tambahkan teks keterangan pada frame real-time
+    info_text = f"Kapsul: {capsule_count}, Blitzer: {blitzer_count}, Kekurangan: {deficiency}, Status: {status}"
+    cv2.putText(realtime_frame, info_text, (10, 30), cv2.FONT_HERSHEY_SIMPLEX, 0.7, (0, 255, 255), 2)
+
+    # Tampilkan hasil deteksi realtime
+    cv2.imshow('Deteksi Real-Time', realtime_frame)
+
     key = cv2.waitKey(1) & 0xFF
     if key == ord('c'):
         print("Gambar diambil.")
-        capsule_count, annotated_image = detect_capsules(frame.copy())
-        print(f'Jumlah kapsul terdeteksi: {capsule_count}')
-        blitzer_count, annotated_image = detect_blitzers(annotated_image)
-        print(f'Jumlah kemasan terdeteksi: {blitzer_count}')
+        captured_frame = frame.copy()  # Ambil frame asli tanpa anotasi untuk deteksi
+
+        # Lakukan deteksi pada frame hasil tangkapan
+        capsule_count, captured_frame = detect_capsules(captured_frame)
+        blitzer_count, captured_frame = detect_blitzers(captured_frame)
+
+        # Hitung kekurangan dan status
         deficiency, status = calculate_deficiency_and_status(capsule_count, blitzer_count)
-        print(f'Kekurangan: {deficiency}, Status: {status}')
+        print(f'Jumlah kapsul: {capsule_count}, Kemasan: {blitzer_count}, Kekurangan: {deficiency}, Status: {status}')
+
+        # Simpan hasil ke database
         save_to_database(blitzer_count, capsule_count, deficiency, status, "Sistem Deteksi Obat", "Sistem Deteksi Obat")
-        cv2.imshow('Hasil Deteksi Kapsul dan Blitzer', annotated_image)
-        text_to_speak = f'Terdeteksi {capsule_count} kapsul, {blitzer_count} kemasan. Kekurangan {deficiency} kapsul. Status {status}.'
+
+        # Tampilkan frame hasil capture di jendela terpisah
+        cv2.imshow('Hasil Deteksi (Capture)', captured_frame)
+
+        # Putar suara hasil deteksi
+        # Putar suara hasil deteksi
+        if deficiency > 0:
+            text_to_speak = f'Kurang {deficiency}'
+        else:
+            text_to_speak = 'Sempurna'
         threading.Thread(target=play_sound, args=(text_to_speak,)).start()
+
+
     elif key == ord('q'):
         print("Keluar.")
         break
