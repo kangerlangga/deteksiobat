@@ -151,8 +151,8 @@ def tflite_detect_realtime(modelpath, lblpath, min_conf=0.5):
     cv2.destroyAllWindows()
 
 # Path configurations
-PATH_TO_MODEL = 'dataset/custom_model_lite/detect.tflite'
+PATH_TO_MODEL = 'dataset/detect.tflite'
 PATH_TO_LABELS = 'labelmap.txt'
 
 # Run the detection
-tflite_detect_realtime(PATH_TO_MODEL, PATH_TO_LABELS, min_conf=0.5)
+tflite_detect_realtime(PATH_TO_MODEL, PATH_TO_LABELS, min_conf=0.01)
