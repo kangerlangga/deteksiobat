@@ -1,5 +1,6 @@
 db_config.py
 model.pth
+coba1.onnx
 # Ignore virtual environment folder
 venv/
 # Byte-compiled / optimized / DLL files
