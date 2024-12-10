@@ -6,91 +6,113 @@ from detectron2 import model_zoo
 from gtts import gTTS
 import playsound
 import socket
+import mysql.connector
+from datetime import datetime
+import random
+from db_config import DATABASE_CONFIG
 
 # Fungsi untuk mengecek koneksi internet
 def check_internet_connection():
     try:
-        # Cek apakah bisa terkoneksi ke google.com port 80
         socket.create_connection(("www.google.com", 80), timeout=5)
         return True
     except OSError:
         return False
 
+# Fungsi untuk menyimpan data ke database
+def save_to_database(blitzer, capsules, deficiency, status, created_by, modified_by):
+    print("Memulai penyimpanan data ke database...")
+    connection = None
+    try:
+        connection = mysql.connector.connect(**DATABASE_CONFIG)
+        print("Koneksi ke database berhasil.")
+        cursor = connection.cursor()
+
+        now = datetime.now()
+        timestamp = now.strftime('%Y%m%d%H%M%S')
+        random_suffix = str(random.randint(100, 999))
+        id_detections = f"Deteksi{timestamp}{random_suffix}"
+
+        query = """
+        INSERT INTO detections (id_detections, blitzer, kapsul, kekurangan, keterangan, created_by, modified_by, created_at, updated_at)
+        VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s)
+        """
+        data = (id_detections, blitzer, capsules, deficiency, status, created_by, modified_by, now, now)
+        cursor.execute(query, data)
+        connection.commit()
+        print("Data berhasil disimpan ke database dengan ID:", id_detections)
+    except mysql.connector.Error as err:
+        print(f"Error: {err}")
+    finally:
+        if connection and connection.is_connected():
+            cursor.close()
+            connection.close()
+            print("Koneksi ke database ditutup.")
+
 # Periksa koneksi internet
 if not check_internet_connection():
     print("Tidak ada koneksi internet. Program akan berhenti.")
-    exit()  # Hentikan program jika tidak ada koneksi
+    exit()
 
 # Load configuration and set up from Model Zoo
 cfg = get_cfg()
-cfg.merge_from_file(model_zoo.get_config_file("COCO-Detection/faster_rcnn_R_50_FPN_3x.yaml"))  # Gunakan konfigurasi YAML dari Model Zoo
-cfg.MODEL.WEIGHTS = "model.pth"  # Path ke model .pth Anda
-cfg.MODEL.DEVICE = "cpu"  # Gunakan "cuda" jika ingin menggunakan GPU
-cfg.MODEL.ROI_HEADS.SCORE_THRESH_TEST = 0.5  # Set threshold deteksi
-cfg.MODEL.ROI_HEADS.NUM_CLASSES = 2  # Pastikan model dilatih dengan 2 kelas: kapsul dan kemasan
+cfg.merge_from_file(model_zoo.get_config_file("COCO-Detection/faster_rcnn_R_50_FPN_3x.yaml"))
+cfg.MODEL.WEIGHTS = "model.pth"
+cfg.MODEL.DEVICE = "cpu"
+cfg.MODEL.ROI_HEADS.SCORE_THRESH_TEST = 0.5
+cfg.MODEL.ROI_HEADS.NUM_CLASSES = 2
 
 # Initialize predictor
 predictor = DefaultPredictor(cfg)
 
 # Define class labels and their respective colors
-class_labels = {0: "Kemasan", 1: "Kapsul"}  # Pastikan label sesuai urutan kelas saat training
-class_colors = {0: (255, 0, 0), 1: (0, 255, 0)}  # Warna untuk setiap kelas: biru untuk kemasan, hijau untuk kapsul
+class_labels = {0: "Kemasan", 1: "Kapsul"}
+class_colors = {0: (255, 0, 0), 1: (0, 255, 0)}
 
 # Open the camera feed
-cap = cv2.VideoCapture(0)  # Gunakan ID kamera yang sesuai jika menggunakan DroidCam atau perangkat lain
+cap = cv2.VideoCapture(1)
 
 if not cap.isOpened():
     print("Tidak dapat mengakses kamera")
     exit()
 
-# Cek resolusi maksimal yang didukung oleh kamera
 max_width = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH))
 max_height = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
 print(f"Resolusi maksimal yang didukung kamera: {max_width}x{max_height}")
 
-# Tentukan resolusi yang diinginkan
 desired_width = 1280
 desired_height = 720
 
-# Jika resolusi maksimal lebih kecil dari 1280x720, atur ke resolusi maksimal
 if max_width < desired_width or max_height < desired_height:
     desired_width = max_width
     desired_height = max_height
     print(f"Resolusi lebih kecil dari 1280x720, menggunakan resolusi maksimal {desired_width}x{desired_height}")
 
-# Set camera resolution
-cap.set(cv2.CAP_PROP_FRAME_WIDTH, desired_width)
-cap.set(cv2.CAP_PROP_FRAME_HEIGHT, desired_height)
+cap.set(cv2.CAP_PROP_FRAME_WIDTH, 1280)
+cap.set(cv2.CAP_PROP_FRAME_HEIGHT, 720)
 
-# Get and display the resolution to verify
 frame_width = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH))
 frame_height = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
 print(f"Resolusi kamera setelah diatur: {frame_width}x{frame_height}")
 
 while True:
-    # Capture frame-by-frame
     ret, frame = cap.read()
     if not ret:
         print("Gagal membaca frame")
         break
 
-    # Display the webcam feed
     cv2.imshow("Sistem Pendeteksi Jumlah Kapsul Kapsida HS", frame)
 
-    # Check for keypress
     key = cv2.waitKey(1) & 0xFF
-    if key == ord('q'):  # Quit if 'q' is pressed
+    if key == ord('q'):
         break
-    elif key == ord('c'):  # Capture frame and process detection if 'c' is pressed
-        # Perform object detection on the captured frame
+    elif key == ord('c'):
         outputs = predictor(frame)
         instances = outputs["instances"]
 
-        # Variables to count detected objects
         kapsul_count = 0
         kemasan_count = 0
 
-        # Draw bounding boxes, labels, and other information on the captured frame
         if instances.has("pred_boxes") and instances.has("pred_classes"):
             boxes = instances.pred_boxes.tensor.cpu().numpy()
             classes = instances.pred_classes.cpu().numpy()
@@ -98,44 +120,39 @@ while True:
             for box, cls in zip(boxes, classes):
                 x1, y1, x2, y2 = box
                 label = class_labels.get(cls, "Unknown")
-                color = class_colors.get(cls, (0, 255, 255))  # Default to yellow if class not found
+                color = class_colors.get(cls, (0, 255, 255))
 
-                # Draw bounding box
                 cv2.rectangle(frame, (int(x1), int(y1)), (int(x2), int(y2)), color, 2)
-
-                # Add label text above the bounding box
                 cv2.putText(frame, label, (int(x1), int(y1) - 10),
-                            cv2.FONT_HERSHEY_SIMPLEX, 0.7, color, 2)  # Font scale 0.7, thickness 2
+                            cv2.FONT_HERSHEY_SIMPLEX, 0.7, color, 2)
 
-                # Count objects by class
                 if label == "Kapsul":
                     kapsul_count += 1
                 elif label == "Kemasan":
                     kemasan_count += 1
 
-        # Calculate the shortage of capsules
         required_kapsul = kemasan_count * 12
         shortfall = required_kapsul - kapsul_count
 
-        # Determine the message based on the shortfall
         if shortfall > 0:
             message = f"Kurang {shortfall}"
+            status = "Cacat"
         else:
             message = "Sempurna"
+            status = "Sempurna"
 
-        # Generate and play the audio
         tts = gTTS(message, lang="id")
         tts.save("output.mp3")
         playsound.playsound("output.mp3")
-        os.remove("output.mp3")  # Remove the audio file after playing
+        os.remove("output.mp3")
 
-        # Add text to show the count of detected objects and the shortfall message
         cv2.putText(frame, f"Kapsul: {kapsul_count};  Kemasan: {kemasan_count}; {message};", (10, 40),
                     cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 255, 255), 2, cv2.LINE_AA)
 
-        # Display the detection result in a new window
         cv2.imshow("Hasil Deteksi", frame)
 
-# Release the camera and close all OpenCV windows
+        # Save detection data to the database
+        save_to_database(kemasan_count, kapsul_count, shortfall, status, "Kapsida Count", "Kapsida Count")
+
 cap.release()
 cv2.destroyAllWindows()

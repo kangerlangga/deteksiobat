@@ -65,9 +65,13 @@ while True:
             elif label == "Kemasan":
                 kemasan_count += 1
 
+    # Menyesuaikan ukuran font dan ketebalan teks agar tidak terlalu besar
+    font_scale = 1  # Ukuran font lebih kecil
+    thickness = 2    # Ketebalan garis teks
+
     # Add text to show the count of detected objects on the image
-    cv2.putText(frame, f"Kapsul: {kapsul_count}  Kemasan: {kemasan_count}", (10, 100),
-                cv2.FONT_HERSHEY_SIMPLEX, 3, (0, 255, 255), 10, cv2.LINE_AA)
+    cv2.putText(frame, f"Kapsul: {kapsul_count}  Kemasan: {kemasan_count}", (10, 40),
+                cv2.FONT_HERSHEY_SIMPLEX, font_scale, (0, 255, 255), thickness, cv2.LINE_AA)
 
     # Display the resulting frame
     cv2.imshow("Deteksi Objek Real-Time", frame)
