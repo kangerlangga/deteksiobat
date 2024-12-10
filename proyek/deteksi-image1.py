@@ -3,6 +3,7 @@ import cv2
 from detectron2.config import get_cfg
 from detectron2.engine import DefaultPredictor
 from detectron2 import model_zoo
+from datetime import datetime
 
 # Load configuration and set up from Model Zoo
 cfg = get_cfg()
@@ -75,12 +76,25 @@ if width > screen_width or height > screen_height:
     new_height = int(height * scale)
     image = cv2.resize(image, (new_width, new_height), interpolation=cv2.INTER_AREA)
 
+# Create a folder 'hasil' if it doesn't exist
+output_folder = "hasil"
+if not os.path.exists(output_folder):
+    os.makedirs(output_folder)
+
+# Generate a unique filename using current timestamp
+timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+output_path = os.path.join(output_folder, f"result_{timestamp}.jpg")
+
 # Save the resulting image
-output_path = "result.jpg"
 cv2.imwrite(output_path, image)
 print(f"Hasil deteksi disimpan di {output_path}")
 
 # Display the resulting image
 cv2.imshow("Sistem Pendeteksi Jumlah Obat Kapsida HS", image)
+
+# Display counts in terminal
+print(f"Jumlah Kapsul: {kapsul_count}")
+print(f"Jumlah Kemasan: {kemasan_count}")
+
 cv2.waitKey(0)
 cv2.destroyAllWindows()

@@ -5,6 +5,21 @@ from detectron2.engine import DefaultPredictor
 from detectron2 import model_zoo
 from gtts import gTTS
 import playsound
+import socket
+
+# Fungsi untuk mengecek koneksi internet
+def check_internet_connection():
+    try:
+        # Cek apakah bisa terkoneksi ke google.com port 80
+        socket.create_connection(("www.google.com", 80), timeout=5)
+        return True
+    except OSError:
+        return False
+
+# Periksa koneksi internet
+if not check_internet_connection():
+    print("Tidak ada koneksi internet. Program akan berhenti.")
+    exit()  # Hentikan program jika tidak ada koneksi
 
 # Load configuration and set up from Model Zoo
 cfg = get_cfg()
@@ -22,15 +37,30 @@ class_labels = {0: "Kemasan", 1: "Kapsul"}  # Pastikan label sesuai urutan kelas
 class_colors = {0: (255, 0, 0), 1: (0, 255, 0)}  # Warna untuk setiap kelas: biru untuk kemasan, hijau untuk kapsul
 
 # Open the camera feed
-cap = cv2.VideoCapture(1)  # Gunakan ID kamera yang sesuai jika menggunakan DroidCam atau perangkat lain
+cap = cv2.VideoCapture(0)  # Gunakan ID kamera yang sesuai jika menggunakan DroidCam atau perangkat lain
 
 if not cap.isOpened():
     print("Tidak dapat mengakses kamera")
     exit()
 
-# Set camera resolution to 720p (1280x720)
-cap.set(cv2.CAP_PROP_FRAME_WIDTH, 1280)
-cap.set(cv2.CAP_PROP_FRAME_HEIGHT, 720)
+# Cek resolusi maksimal yang didukung oleh kamera
+max_width = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH))
+max_height = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
+print(f"Resolusi maksimal yang didukung kamera: {max_width}x{max_height}")
+
+# Tentukan resolusi yang diinginkan
+desired_width = 1280
+desired_height = 720
+
+# Jika resolusi maksimal lebih kecil dari 1280x720, atur ke resolusi maksimal
+if max_width < desired_width or max_height < desired_height:
+    desired_width = max_width
+    desired_height = max_height
+    print(f"Resolusi lebih kecil dari 1280x720, menggunakan resolusi maksimal {desired_width}x{desired_height}")
+
+# Set camera resolution
+cap.set(cv2.CAP_PROP_FRAME_WIDTH, desired_width)
+cap.set(cv2.CAP_PROP_FRAME_HEIGHT, desired_height)
 
 # Get and display the resolution to verify
 frame_width = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH))
@@ -102,8 +132,6 @@ while True:
         # Add text to show the count of detected objects and the shortfall message
         cv2.putText(frame, f"Kapsul: {kapsul_count};  Kemasan: {kemasan_count}; {message};", (10, 40),
                     cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 255, 255), 2, cv2.LINE_AA)
-        # cv2.putText(frame, message, (10 + 200, 80),  # Letakkan message di samping Kemasan
-        #             cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 0, 255), 2, cv2.LINE_AA)
 
         # Display the detection result in a new window
         cv2.imshow("Deteksi Objek dari Capture", frame)
