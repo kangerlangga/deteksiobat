@@ -138,6 +138,7 @@ while True:
             message = f"Kurang {shortfall}"
             status = "Cacat"
         else:
+            shortfall = 0
             message = "Sempurna"
             status = "Sempurna"
 
