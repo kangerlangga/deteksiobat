@@ -123,7 +123,7 @@ while True:
                 color = class_colors.get(cls, (0, 255, 255))
 
                 cv2.rectangle(frame, (int(x1), int(y1)), (int(x2), int(y2)), color, 2)
-                cv2.putText(frame, label, (int(x1), int(y1) - 10),
+                cv2.putText(frame, "", (int(x1), int(y1) - 10),
                             cv2.FONT_HERSHEY_SIMPLEX, 0.7, color, 2)
 
                 if label == "Kapsul":
